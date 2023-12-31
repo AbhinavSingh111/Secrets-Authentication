@@ -2,6 +2,9 @@ import bodyParser from "body-parser";
 import express from "express";
 import mongoose from "mongoose";
 
+// for encryption
+import encrypt from "mongoose-encryption";
+
 const app = express();
 const port = 3000;
 
@@ -14,11 +17,26 @@ mongoose.connect("mongodb://127.0.0.1:27017/userDB", {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
-// creating schema
-const userSchema = {
+// creating schema (normal)
+// const userSchema = {
+//   email: String,
+//   password: String,
+// };
+
+// modifying above schema to use encryption
+
+const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-};
+});
+
+// defining a secert key for encryption (use it as a environment variable)
+
+const secret = "Greetings , fellow coder ! Let's have a chat.";
+
+// using encryption plugin on schema and defining fields to encrypt
+
+userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
 
 const User = new mongoose.model("User", userSchema);
 
@@ -40,6 +58,7 @@ app.post("/login", async (req, res) => {
 
   try {
     const foundUser = await User.findOne({ email: username });
+    console.log(foundUser);
 
     if (foundUser) {
       if (password === foundUser.password) {
