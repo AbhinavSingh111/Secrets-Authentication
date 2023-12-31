@@ -116,20 +116,30 @@ app.post("/login", (req, res) => {
  
 });
 
-app.post("/register",  (req, res) => {
-    User.register({username : req.body.username}, req.body.password, function(err, user){
-        if(err){
-            console.log(err);
-            res.redirect('/register');
+app.post("/register", async (req, res) => {
+    // Check if a user with the same username already exists
+        const foundUser = await User.findOne({ username: req.body.username });
+        // If a user with the same username exists, redirect to the registration page with an error message
+        if (foundUser) {
+            console.log('User with this username already exists.');
+            return res.redirect('/register');
         }
-        else{
-            passport.authenticate('local')(req,res,function(){
+
+        // If the username is unique, proceed with user registration
+        User.register({ username: req.body.username }, req.body.password, (err, user) => {
+            if (err) {
+                console.error(err);
+                return res.redirect('/register');
+            }
+
+            // If registration is successful, authenticate the user and redirect to the secrets page
+            passport.authenticate('local')(req, res, () => {
                 res.redirect('/secrets');
             });
-        }
+        });
     });
-    
-});
+
+
 
 
 app.listen(port, (req, res) => {
