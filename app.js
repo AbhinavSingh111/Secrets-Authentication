@@ -1,4 +1,4 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 import bodyParser from "body-parser";
 import express from "express";
 import mongoose from "mongoose";
@@ -7,11 +7,18 @@ import mongoose from "mongoose";
 import encrypt from "mongoose-encryption";
 
 // for hashing
-import md5 from 'md5';
+import md5 from "md5";
+
+// for using salting and bcrypt
+
+import bcrypt from "bcrypt";
+
+// defining round of salting
+const saltRounds = 10;
 
 const app = express();
 const port = 3000;
-dotenv.config()
+dotenv.config();
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -37,8 +44,6 @@ const userSchema = new mongoose.Schema({
 
 // defining a secert key for encryption (use it as a environment variable)
 
-
-
 // using encryption plugin on schema and defining fields to encrypt
 // const secret = process.env.SECRET
 // const secret = process.env.SECRET
@@ -61,16 +66,19 @@ app.get("/register", (req, res) => {
 
 app.post("/login", async (req, res) => {
   const username = req.body.username;
-  const password = md5(req.body.password);
+  //   const password = md5(req.body.password);
+  const password = req.body.password;
 
   try {
     const foundUser = await User.findOne({ email: username });
     if (foundUser) {
-      if (password === foundUser.password) {
-        res.render("secrets.ejs");
-      } else {
-        res.redirect("/login");
-      }
+      bcrypt.compare(password, foundUser.password, function (err, result) {
+        if (result === true) {
+          res.render("secrets.ejs");
+        } else {
+          res.redirect("/login");
+        }
+      });
     } else {
       res.redirect("/login");
     }
@@ -81,18 +89,28 @@ app.post("/login", async (req, res) => {
 });
 
 app.post("/register", async (req, res) => {
-  const newUser = new User({
-    email: req.body.username,
-    password: md5(req.body.password),
+    try {
+        // Hash the password using bcrypt
+        const hashedPassword = await bcrypt.hash(req.body.password, saltRounds);
+
+        // Create a new user with the hashed password
+        const newUser = new User({
+            email: req.body.username,
+            password: hashedPassword,
+        });
+
+        // Save the user to the database
+        await newUser.save();
+        
+        // Redirect to a success page or render a success view
+        res.render("secrets.ejs");
+    } catch (err) {
+        // Handle errors
+        console.error(err);
+        res.status(500).send("Internal Server Error");
+    }
   });
 
-  try {
-    await newUser.save();
-    res.render("secrets.ejs");
-  } catch (err) {
-    console.error(err);
-  }
-});
 
 app.listen(port, (req, res) => {
   console.log(`listening on port ${port}`);
