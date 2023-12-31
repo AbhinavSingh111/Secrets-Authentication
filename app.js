@@ -1,3 +1,4 @@
+import dotenv from 'dotenv';
 import bodyParser from "body-parser";
 import express from "express";
 import mongoose from "mongoose";
@@ -7,6 +8,7 @@ import encrypt from "mongoose-encryption";
 
 const app = express();
 const port = 3000;
+dotenv.config()
 
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({ extended: true }));
@@ -32,9 +34,10 @@ const userSchema = new mongoose.Schema({
 
 // defining a secert key for encryption (use it as a environment variable)
 
-const secret = "Greetings , fellow coder ! Let's have a chat.";
+
 
 // using encryption plugin on schema and defining fields to encrypt
+const secret = process.env.SECRET
 
 userSchema.plugin(encrypt, { secret: secret, encryptedFields: ['password'] });
 
@@ -58,8 +61,6 @@ app.post("/login", async (req, res) => {
 
   try {
     const foundUser = await User.findOne({ email: username });
-    console.log(foundUser);
-
     if (foundUser) {
       if (password === foundUser.password) {
         res.render("secrets.ejs");
