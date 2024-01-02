@@ -54,7 +54,8 @@ mongoose.connect("mongodb://127.0.0.1:27017/userDB", {
 const userSchema = new mongoose.Schema({
   email: String,
   password: String,
-  googleId: String
+  googleId: String,
+  secret: String
 });
 
 
@@ -114,14 +115,48 @@ app.get("/register", (req, res) => {
   res.render("register.ejs");
 });
 
-app.get('/secrets' , (req,res)=>{
+app.get('/secrets' , async (req,res)=>{
+    const foundUsers = await User.find({'secret':{'$ne':null}});
+    if(foundUsers){
+        if(req.isAuthenticated()){
+            res.render('secrets.ejs',{usersWithSecrets:foundUsers,loggedIn:true});
+        }
+        else{
+            res.render('secrets.ejs',{usersWithSecrets:foundUsers,loggedIn:false});
+        }
+    }
+    
+    else{
+        console.log("Some error occured in fetching users with secrets!");
+    }
+    
+});
+
+
+app.get('/submit',(req,res)=>{
     if(req.isAuthenticated()){
-        res.render('secrets.ejs');
+        res.render('submit.ejs');
     }
     else{
         res.redirect('/login');
     }
-});
+})
+
+app.post('/submit', async (req,res)=>{
+    const submittedSecret = req.body.secret;
+    const foundUser = await User.findById(req.user.id);
+    if(foundUser){
+        foundUser.secret = submittedSecret;
+            await foundUser.save();
+            res.redirect('/secrets');
+    }
+    else
+    {
+        console.log(err);
+        res.render('/secrets');
+    }
+       
+})
 
 app.get('/auth/google',
   passport.authenticate('google', { scope: ['profile'] }));
